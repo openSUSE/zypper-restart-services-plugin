@@ -14,7 +14,7 @@ This plugin helps by:
 
 - Detecting services affected by package updates
 - Providing restart recommendations
-- Maintaining a log file (`/var/log/zypp/zypper-restart-services-plugin.log`) with all detected services and actions
+- Maintaining a log file (`/var/log/zypp/restart-services-plugin.log`) with all detected services and actions
 - Integrating seamlessly with the Zypper workflow
 
 The plugin is primarily intended for openSUSE systems and is packaged and built using the **openSUSE Build Service (OBS)**.
