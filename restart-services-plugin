@@ -11,6 +11,10 @@ import sys
 from zypp_plugin import Plugin
 import logging
 from pathlib import Path
+import rpm
+
+libexec = rpm.expandMacro("%{_libexecdir}")
+RESTART_SCRIPT = f"{libexec}/zypper/restart-services"
 
 LOGFILE = Path("/var/log/zypp/restart-services-plugin.log")
 
@@ -27,7 +31,7 @@ def run_restart_services():
     try:
         log("[restart-services] starting")
         process = subprocess.Popen(
-            ["/usr/libexec/zypper/restart-services"],
+            [RESTART_SCRIPT],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True
