@@ -90,7 +90,9 @@ def restart_services(services):
         if unit not in unit_files:
             logger.warning("Skipping %s (not a valid systemd unit)", unit)
             continue
-        run(["systemctl", "try-restart", unit])
+        retcode = run(["systemctl", "try-restart", unit])
+        if retcode != 0:
+            logger.error("Failed to restart %s (code %d)", unit, retcode)
 
 def main():
     logger.info("Checking for processes using deleted or updated files...")
