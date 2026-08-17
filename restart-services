@@ -62,9 +62,12 @@ def parse_services_from_zypper():
             services.append("systemd")
     return sorted(set(services))
 
-def systemd_unit_exists(unit):
-    output, _ = run(["systemctl", "list-unit-files"], capture=True)
-    return any(line.startswith(unit) for line in output.splitlines())
+def systemd_unit_files():
+    output, _ = run(
+        ["systemctl", "list-unit-files", "--no-legend", "--no-pager"],
+        capture=True,
+    )
+    return {line.split()[0] for line in output.splitlines() if line.strip()}
 
 def handle_dbus():
     logger.info("Restarting dbus.socket...")
@@ -89,12 +92,13 @@ def get_user_systemds():
     return sorted(set(users))
 
 def restart_services(services):
+    unit_files = systemd_unit_files()
     for svc in services:
         unit = f"{svc}.service"
         if svc in IGNORE_SERVICES:
             logger.info("Skipping %s (always ignored)", unit)
             continue
-        if not systemd_unit_exists(unit):
+        if unit not in unit_files:
             logger.warning("Skipping %s (not a valid systemd unit)", unit)
             continue
         run(["systemctl", "try-restart", unit])
