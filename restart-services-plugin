@@ -75,7 +75,8 @@ class PostUpdatePlugin(Plugin):
         success = run_restart_services()
         if not success:
             self.error({}, "restart-services failed")
-        self.ack()
+        else:
+            self.ack()
 
 if __name__ == "__main__":
     plugin = PostUpdatePlugin()
