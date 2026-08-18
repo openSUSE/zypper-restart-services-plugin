@@ -30,7 +30,7 @@ if VERBOSE:
     console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(console_handler)
 
-IGNORE_SERVICES = ["display-manager.service"]
+IGNORE_SERVICES = ["display-manager"]
 
 def run(cmd, capture=False, check=False):
     try:
@@ -43,28 +43,25 @@ def run(cmd, capture=False, check=False):
         logger.error("Command failed: %s (code %d)", cmd, e.returncode)
         return "", e.returncode
 
-def parse_services_from_zypper():
-    output, retcode = run(["zypper", "ps", "-s"], capture=True)
+def get_services_from_zypper():
+    output, retcode = run(["zypper", "ps", "-sss"], capture=True)
+
     if retcode == 102:
         logger.info("Core libraries or services updated: a reboot is suggested.")
 
-    services = []
-    for line in output.splitlines():
-        if "|" not in line or line.startswith("PID") or set(line.strip()) <= {"-", "+"}:
-            continue
-        parts = [p.strip() for p in line.split("|")]
-        if len(parts) < 6:
-            continue
-        _, _, _, _, command, service = parts[:6]
-        if service and all(c.isalnum() or c in "_.@:-" for c in service):
-            services.append(service)
-        elif command == "systemd":
-            services.append("systemd")
-    return sorted(set(services))
+    return sorted(set(line.strip() for line in output.splitlines() if line.strip()))
 
-def systemd_unit_exists(unit):
-    output, _ = run(["systemctl", "list-unit-files"], capture=True)
-    return any(line.startswith(unit) for line in output.splitlines())
+def systemd_unit_files():
+    output, retcode = run(
+        ["systemctl", "list-unit-files", "--no-legend", "--no-pager"],
+        capture=True,
+    )
+
+    if retcode:
+        logger.error("Failed to list systemd unit files")
+        return set()
+
+    return {line.split()[0] for line in output.splitlines() if line.strip()}
 
 def handle_dbus():
     logger.info("Restarting dbus.socket...")
@@ -89,19 +86,22 @@ def get_user_systemds():
     return sorted(set(users))
 
 def restart_services(services):
+    unit_files = systemd_unit_files()
     for svc in services:
         unit = f"{svc}.service"
         if svc in IGNORE_SERVICES:
             logger.info("Skipping %s (always ignored)", unit)
             continue
-        if not systemd_unit_exists(unit):
+        if unit not in unit_files:
             logger.warning("Skipping %s (not a valid systemd unit)", unit)
             continue
-        run(["systemctl", "try-restart", unit])
+        retcode = run(["systemctl", "try-restart", unit])
+        if retcode != 0:
+            logger.error("Failed to restart %s (code %d)", unit, retcode)
 
 def main():
     logger.info("Checking for processes using deleted or updated files...")
-    services = parse_services_from_zypper()
+    services = get_services_from_zypper()
     if not services:
         logger.info("No affected services found. Nothing to restart.")
         return 0

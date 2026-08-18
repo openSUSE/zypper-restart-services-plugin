@@ -3,7 +3,7 @@
 SPDX-FileCopyrightText: 2026 Ralf Habacker
 SPDX-License-Identifier: GPL-2.0-or-later
 
-ZYpp commit plugin: run /usr/libexec/zypper/restart-services after package updates
+ZYpp commit plugin: run %{_libexecdir}/zypper/restart-services after package updates
 """
 
 import subprocess
@@ -75,7 +75,8 @@ class PostUpdatePlugin(Plugin):
         success = run_restart_services()
         if not success:
             self.error({}, "restart-services failed")
-        self.ack()
+        else:
+            self.ack()
 
 if __name__ == "__main__":
     plugin = PostUpdatePlugin()
